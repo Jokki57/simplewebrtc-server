@@ -1,35 +1,24 @@
-/*global console*/
-var yetify = require('yetify'),
-    config = require('getconfig'),
-    fs = require('fs'),
-    sockets = require('./sockets'),
-    port = parseInt(process.env.PORT || config.server.port, 10),
-    server_handler = function (req, res) {
-        res.writeHead(404);
-        res.end();
-    },
-    server = null;
+/**
+ * Created by User on 02/07/2016.
+ */
+const PORT = 8080,
+    INDEX = '/index.html',
+    express = require('express'),
+    socketIO = require('socket.io'),
+    server = express()
+        .use(function(req, res) {
+            res.sendFile(__dirname + INDEX);
+        })
+        .listen(PORT, function() {console.log('listening on port: ' + PORT)}),
+    io = socketIO(server);
 
-// Create an http(s) server instance to that socket.io can listen to
-if (config.server.secure) {
-    server = require('https').Server({
-        key: fs.readFileSync(config.server.key),
-        cert: fs.readFileSync(config.server.cert),
-        passphrase: config.server.password
-    }, server_handler);
-} else {
-    server = require('http').Server(server_handler);
-}
-server.listen(port);
+io.on('connection', function(socket) {
+   console.log('Client connected');
+    socket.on('disconnect', function() {
+        console.log('client disconnected');
+    });
+});
 
-sockets(server, config);
-
-if (config.uid) process.setuid(config.uid);
-
-var httpUrl;
-if (config.server.secure) {
-    httpUrl = "https://localhost:" + port;
-} else {
-    httpUrl = "http://localhost:" + port;
-}
-console.log(yetify.logo() + ' -- signal master is running at: ' + httpUrl);
+setInterval(function() {
+    io.emit('time', new Date().toTimeString());
+}, 1000);
